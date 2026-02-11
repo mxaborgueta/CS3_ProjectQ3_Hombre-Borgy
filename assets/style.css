@@ -17,24 +17,27 @@ body {
 .container {
     display: flex;
     height: 100vh;
-    transition: all 0.3s ease;
+    width: 100vw;
 }
 
 /* Sidebar */
 .sidebar {
     width: 320px;
+    min-width: 320px;
     background: rgba(22, 33, 62, 0.95);
     backdrop-filter: blur(10px);
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease;
     z-index: 1000;
     overflow-y: auto;
 }
 
 .sidebar.collapsed {
     transform: translateX(-320px);
+    min-width: 0;
+    width: 0;
 }
 
 .sidebar-header {
@@ -44,6 +47,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
 }
 
 .logo {
@@ -63,6 +67,7 @@ body {
     background: linear-gradient(90deg, #00b4d8, #90e0ef);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
     margin-bottom: 0.2rem;
 }
 
@@ -84,6 +89,7 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
+    flex-shrink: 0;
 }
 
 .toggle-sidebar:hover {
@@ -124,20 +130,32 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
+    text-align: left;
+    width: 100%;
+    border: none;
 }
 
 .layer-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.15);
     transform: translateX(5px);
 }
 
 .layer-btn.active {
-    background: rgba(0, 180, 216, 0.2);
-    border-color: #00b4d8;
+    background: rgba(0, 180, 216, 0.3);
+    border: 1px solid #00b4d8;
+}
+
+.layer-btn i:first-child {
+    font-size: 1.2rem;
+    width: 24px;
+    text-align: center;
+}
+
+.layer-btn span {
+    flex: 1;
 }
 
 .layer-btn .status-icon {
-    margin-left: auto;
     color: #00b4d8;
     opacity: 0;
     transition: opacity 0.3s ease;
@@ -166,8 +184,23 @@ body {
 .legend-color {
     width: 20px;
     height: 20px;
+    min-width: 20px;
     border-radius: 50%;
     border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.legend-info {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.4;
+}
+
+.legend-info p {
+    margin-bottom: 0.3rem;
+}
+
+.legend-info p:last-child {
+    margin-bottom: 0;
 }
 
 /* Information Panel */
@@ -176,9 +209,17 @@ body {
     line-height: 1.6;
 }
 
+.info-content p {
+    margin-bottom: 0.5rem;
+}
+
 .info-content ul {
     margin: 0.5rem 0 0.5rem 1.5rem;
     color: #90e0ef;
+}
+
+.info-content li {
+    margin-bottom: 0.3rem;
 }
 
 .timestamp {
@@ -195,17 +236,21 @@ body {
     display: flex;
     flex-direction: column;
     position: relative;
-    transition: all 0.3s ease;
+    overflow: hidden;
+    min-width: 0;
+    width: 100%;
 }
 
 .map-header {
     padding: 1rem 1.5rem;
-    background: rgba(22, 33, 62, 0.9);
+    background: rgba(22, 33, 62, 0.95);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 1rem;
+    min-height: 72px;
+    flex-shrink: 0;
+    width: 100%;
 }
 
 .map-header h2 {
@@ -213,6 +258,10 @@ body {
     font-weight: 600;
     color: white;
     flex: 1;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .mobile-toggle {
@@ -223,11 +272,13 @@ body {
     font-size: 1.5rem;
     cursor: pointer;
     padding: 0.5rem;
+    flex-shrink: 0;
 }
 
 .map-controls {
     display: flex;
     gap: 0.5rem;
+    flex-shrink: 0;
 }
 
 .control-btn {
@@ -242,6 +293,8 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
+    flex-shrink: 0;
+    border: none;
 }
 
 .control-btn:hover {
@@ -254,6 +307,8 @@ body {
     flex: 1;
     position: relative;
     overflow: hidden;
+    min-height: 0;
+    width: 100%;
 }
 
 .map-layer {
@@ -278,6 +333,12 @@ body {
     z-index: 2;
 }
 
+/* Ensure Leaflet map container fills the parent */
+#baseMap.leaflet-container {
+    width: 100% !important;
+    height: 100% !important;
+}
+
 /* Loading Overlay */
 .loading-overlay {
     position: absolute;
@@ -285,12 +346,13 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(22, 33, 62, 0.9);
+    background: rgba(22, 33, 62, 0.95);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    display: none;
 }
 
 .loading-spinner {
@@ -335,6 +397,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .quake-panel-header h3 {
@@ -342,6 +405,8 @@ body {
     align-items: center;
     gap: 0.5rem;
     color: #00b4d8;
+    margin: 0;
+    font-size: 1.1rem;
 }
 
 .close-panel {
@@ -352,6 +417,7 @@ body {
     cursor: pointer;
     padding: 0.5rem;
     transition: all 0.3s ease;
+    flex-shrink: 0;
 }
 
 .close-panel:hover {
@@ -363,6 +429,7 @@ body {
     flex: 1;
     overflow-y: auto;
     padding: 1rem;
+    min-height: 0;
 }
 
 .quake-item {
@@ -383,17 +450,18 @@ body {
 .quake-magnitude {
     font-size: 1.5rem;
     font-weight: 700;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.5rem;
 }
 
 .quake-location {
     font-size: 0.95rem;
     color: #90e0ef;
     margin-bottom: 0.5rem;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    line-height: 1.3;
     overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-height: 2.6em;
 }
 
 .quake-time {
@@ -404,6 +472,10 @@ body {
     gap: 0.5rem;
 }
 
+.quake-time i {
+    font-size: 0.8rem;
+}
+
 /* Floating Controls */
 .floating-controls {
     position: absolute;
@@ -412,7 +484,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    z-index: 100;
+    z-index: 1000;
 }
 
 .floating-btn {
@@ -444,13 +516,14 @@ body {
     background: #ff6b6b;
     color: white;
     font-size: 0.7rem;
-    width: 22px;
+    min-width: 22px;
     height: 22px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
+    padding: 0 5px;
 }
 
 /* Responsive Design */
@@ -458,7 +531,11 @@ body {
     .sidebar {
         position: fixed;
         height: 100vh;
+        left: 0;
+        top: 0;
         transform: translateX(-100%);
+        width: 300px;
+        min-width: 300px;
     }
     
     .sidebar.active {
@@ -475,6 +552,7 @@ body {
     
     .quake-panel {
         width: 100%;
+        max-width: 380px;
         right: -100%;
     }
     
@@ -486,9 +564,17 @@ body {
         bottom: 1rem;
         right: 1rem;
     }
+    
+    .sidebar.collapsed {
+        transform: translateX(-100%);
+    }
 }
 
 @media (max-width: 768px) {
+    .map-header {
+        padding: 1rem;
+    }
+    
     .map-header h2 {
         font-size: 1.2rem;
     }
@@ -497,6 +583,43 @@ body {
         width: 48px;
         height: 48px;
         font-size: 1rem;
+    }
+    
+    .quake-panel {
+        max-width: 100%;
+        width: 100%;
+    }
+    
+    .sidebar {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .quake-location {
+        white-space: normal;
+        word-break: break-word;
+        max-height: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .map-header h2 {
+        font-size: 1rem;
+    }
+    
+    .control-btn {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .floating-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 0.9rem;
+    }
+    
+    .quake-location {
+        font-size: 0.9rem;
     }
 }
 
@@ -518,3 +641,149 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 180, 216, 0.7);
 }
+
+/* Custom marker styles for user location */
+.user-marker {
+    background: transparent;
+    border: none;
+}
+
+/* Popup styles */
+.quake-popup {
+    color: #333;
+    font-size: 14px;
+    line-height: 1.4;
+    min-width: 200px;
+}
+
+.quake-popup h3 {
+    color: #ff3b30;
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+}
+
+.quake-popup p {
+    margin: 5px 0;
+}
+
+.quake-popup strong {
+    color: #555;
+}
+
+.quake-popup button {
+    margin-top: 10px;
+    padding: 8px 15px;
+    background: #00b4d8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    width: 100%;
+    transition: background 0.3s;
+}
+
+.quake-popup button:hover {
+    background: #0093b8;
+}
+
+/* Ensure iframes are visible when active */
+iframe.map-layer.active {
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Leaflet popup customization */
+.leaflet-popup-content-wrapper {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.leaflet-popup-tip {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.leaflet-control-attribution {
+    background: rgba(0, 0, 0, 0.5) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-size: 11px !important;
+    padding: 2px 5px !important;
+}
+
+.leaflet-control-attribution a {
+    color: #00b4d8 !important;
+}
+
+/* Fix for text overflow */
+.truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Animation for earthquake markers */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+}
+
+.pulse-marker {
+    animation: pulse 2s infinite;
+}
+
+/* Utility classes */
+.hidden {
+    display: none !important;
+}
+
+.visible {
+    display: block !important;
+}
+
+/* Ensure proper stacking context */
+.map-container > * {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Fix for collapsed sidebar */
+.sidebar.collapsed + .main-content {
+    margin-left: 0;
+    width: 100%;
+}
+
+/* Loading state */
+.loading .quake-item {
+    animation: pulse 1.5s infinite;
+}
+
+/* No earthquakes message */
+.no-quakes {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+}
+
+/* Magnitude color classes */
+.magnitude-low { color: #4cd964; }
+.magnitude-medium { color: #ffcc00; }
+.magnitude-high { color: #ff9500; }
+.magnitude-very-high { color: #ff3b30; }
+.magnitude-extreme { color: #8b0000; }
