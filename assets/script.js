@@ -65,7 +65,7 @@ class QuakePHMap {
         this.autoRefreshInterval = null;
         
         // Drawing Variables
-        this.drawControl = null;
+        this.drawOptions = null;
         this.drawnItems = new L.FeatureGroup();
         this.drawingMode = null;
         this.selectedDrawing = null;
@@ -74,7 +74,11 @@ class QuakePHMap {
         this.isDrawingActive = false;
         this.isDrawingEnabled = false;
         this.drawingToolsPanel = document.querySelector('.drawing-tools-panel');
-        
+
+        this.initMap();
+        this.disableDefaultRectanglePreview(); // Add this line
+        this.initEventListeners();
+
         // Initialize
         this.initMap();
         this.initEventListeners();
@@ -84,6 +88,13 @@ class QuakePHMap {
         this.updateLegend();
         this.loadSavedDrawings();
         this.updateDrawingButtonsState();
+
+        window.addEventListener('beforeunload', () => {
+            if (this.toolbarObserver) {
+                this.toolbarObserver.disconnect();
+            }
+        });
+
     }
     
     // Initialize Leaflet Map
@@ -115,97 +126,618 @@ class QuakePHMap {
         
         // Add drawing layer to map
         this.drawnItems.addTo(this.map);
+        
+        // Initialize map.drawControlHandlers object for storing active draw handlers
+        this.map.drawControlHandlers = {};
+
+        setTimeout(() => {
+        if (this.map._controls) {
+            this.map._controls.forEach(control => {
+                if (control instanceof L.Control.Draw) {
+                    this.map.removeControl(control);
+                }
+            });
+        }
+    }, 100);
+
     }
     
-    // Initialize Drawing System
-    initDrawingSystem() {
-        // Initialize draw control (only when needed)
-        this.drawControl = new L.Control.Draw({
-            position: 'topleft',
-            draw: {
-                polyline: {
-                    shapeOptions: {
-                        color: this.drawColor.value,
-                        weight: parseInt(this.lineWidth.value)
-                    }
-                },
-                polygon: {
-                    shapeOptions: {
-                        color: this.drawColor.value,
-                        weight: parseInt(this.lineWidth.value),
-                        fillColor: this.drawColor.value,
-                        fillOpacity: parseInt(this.fillOpacity.value) / 100
-                    }
-                },
-                rectangle: {
-                    shapeOptions: {
-                        color: this.drawColor.value,
-                        weight: parseInt(this.lineWidth.value),
-                        fillColor: this.drawColor.value,
-                        fillOpacity: parseInt(this.fillOpacity.value) / 100
-                    }
-                },
-                circle: {
-                    shapeOptions: {
-                        color: this.drawColor.value,
-                        weight: parseInt(this.lineWidth.value),
-                        fillColor: this.drawColor.value,
-                        fillOpacity: parseInt(this.fillOpacity.value) / 100
-                    }
-                },
-                marker: {
-                    icon: L.divIcon({
-                        className: 'custom-marker',
-                        html: `<div style="background: ${this.drawColor.value}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>`,
-                        iconSize: [24, 24],
-                        iconAnchor: [12, 12]
-                    })
+    // Replace your initDrawingSystem method with this:
+initDrawingSystem() {
+    // Initialize draw control with hidden toolbar
+    this.drawControl = new L.Control.Draw({
+        position: 'topleft',
+        draw: {
+            polyline: {
+                shapeOptions: {
+                    color: this.drawColor.value,
+                    weight: parseInt(this.lineWidth.value)
                 }
             },
-            edit: {
-                featureGroup: this.drawnItems,
-                remove: false
+            polygon: {
+                shapeOptions: {
+                    color: this.drawColor.value,
+                    weight: parseInt(this.lineWidth.value),
+                    fillColor: this.drawColor.value,
+                    fillOpacity: parseInt(this.fillOpacity.value) / 100
+                },
+                allowIntersection: false,
+                showArea: true
+            },
+            rectangle: {
+                shapeOptions: {
+                    color: this.drawColor.value,
+                    weight: parseInt(this.lineWidth.value),
+                    fillColor: this.drawColor.value,
+                    fillOpacity: parseInt(this.fillOpacity.value) / 100
+                }
+            },
+            circle: {
+                shapeOptions: {
+                    color: this.drawColor.value,
+                    weight: parseInt(this.lineWidth.value),
+                    fillColor: this.drawColor.value,
+                    fillOpacity: parseInt(this.fillOpacity.value) / 100
+                }
+            },
+            marker: {
+                icon: L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="background: ${this.drawColor.value}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                })
             }
-        });
-        
-        // Add draw control to map
-        this.map.addControl(this.drawControl);
-        
-        // Handle drawing created event
-        this.map.on(L.Draw.Event.CREATED, (e) => {
-            const layer = e.layer;
-            const type = e.layerType;
-            
-            // Style the drawn item
-            this.styleDrawnItem(layer, type);
-            
-            // Add to drawn items
-            this.drawnItems.addLayer(layer);
-            
-            // Save drawing
-            this.saveDrawing(layer, type);
-            
-            // Exit drawing mode
-            this.exitDrawingMode();
-            
-            // Select the new drawing
-            this.selectDrawing(layer);
-        });
-        
-        // Handle drawing edited event
-        this.map.on(L.Draw.Event.EDITED, (e) => {
-            const layers = e.layers;
-            layers.eachLayer((layer) => {
-                this.updateDrawing(layer);
+        },
+        edit: {
+            featureGroup: this.drawnItems,
+            remove: false
+        }
+    });
+    
+    // Add draw control to map
+    this.map.addControl(this.drawControl);
+    
+    // CRITICAL: Hide the draw toolbar immediately and permanently
+    const hideToolbar = () => {
+        setTimeout(() => {
+            // Find all draw toolbars and hide them
+            document.querySelectorAll('.leaflet-draw.leaflet-control').forEach(el => {
+                el.style.display = 'none';
             });
-        });
+            
+            // Also hide any toolbar that might appear later
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.addedNodes.length) {
+                        mutation.addedNodes.forEach(node => {
+                            if (node.nodeType === 1 && node.classList) {
+                                if (node.classList.contains('leaflet-draw') || 
+                                    node.classList.contains('leaflet-control-draw')) {
+                                    node.style.display = 'none';
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            
+            // Store observer to disconnect later
+            this.toolbarObserver = observer;
+        }, 100);
+    };
+    
+    hideToolbar();
+    
+    // Handle drawing created event
+    this.map.on(L.Draw.Event.CREATED, (e) => {
+        const layer = e.layer;
+        const type = e.layerType;
         
-        // Handle drawing selection
-        this.map.on('click', (e) => {
-            if (!e.originalEvent.propagatedFromDrawing) {
-                this.deselectAllDrawings();
+        // Style the drawn item
+        this.styleDrawnItem(layer, type);
+        
+        // Add to drawn items
+        this.drawnItems.addLayer(layer);
+        
+        // Save drawing
+        this.saveDrawing(layer, type);
+        
+        // Exit drawing mode
+        this.exitDrawingMode();
+        
+        // Select the new drawing
+        this.selectDrawing(layer);
+    });
+    
+    // Handle drawing edited event
+    this.map.on(L.Draw.Event.EDITED, (e) => {
+        const layers = e.layers;
+        layers.eachLayer((layer) => {
+            this.updateDrawing(layer);
+        });
+    });
+    
+    // Handle drawing deleted event
+    this.map.on(L.Draw.Event.DELETED, (e) => {
+        const layers = e.layers;
+        layers.eachLayer((layer) => {
+            this.removeDrawing(layer);
+        });
+    });
+    
+    // Handle drawing selection
+    this.map.on('click', (e) => {
+        if (!e.originalEvent.propagatedFromDrawing) {
+            this.deselectAllDrawings();
+        }
+    });
+}
+
+disableDefaultRectanglePreview() {
+    // Override the Rectangle draw handler to use our custom styles
+    if (L.Draw && L.Draw.Rectangle) {
+        // Save the original initialize method
+        const originalInitialize = L.Draw.Rectangle.prototype.initialize;
+        
+        // Override the initialize method to set custom options
+        L.Draw.Rectangle.prototype.initialize = function(map, options) {
+            options = options || {};
+            options.shapeOptions = options.shapeOptions || {};
+            options.shapeOptions.color = this.drawColor?.value || '#ff3b30';
+            options.shapeOptions.weight = parseInt(this.lineWidth?.value || '3');
+            options.shapeOptions.fillColor = this.drawColor?.value || '#ff3b30';
+            options.shapeOptions.fillOpacity = 0.1;
+            
+            originalInitialize.call(this, map, options);
+        };
+        
+        // Override the _updateShape method to ensure our styles are applied
+        if (L.Draw.Rectangle.prototype._updateShape) {
+            const originalUpdateShape = L.Draw.Rectangle.prototype._updateShape;
+            
+            L.Draw.Rectangle.prototype._updateShape = function(latlng) {
+                originalUpdateShape.call(this, latlng);
+                
+                // Apply custom styles to the rectangle preview
+                if (this._shape) {
+                    this._shape.setStyle({
+                        color: this.drawColor?.value || '#ff3b30',
+                        weight: parseInt(this.lineWidth?.value || '3'),
+                        fillColor: this.drawColor?.value || '#ff3b30',
+                        fillOpacity: 0.1
+                    });
+                }
+            };
+        }
+    }
+}
+
+
+cleanupDrawingControls() {
+    // Remove any existing draw handlers
+    if (this.map._drawControlHandlers) {
+        Object.values(this.map._drawControlHandlers).forEach(handler => {
+            if (handler && handler.disable) {
+                handler.disable();
             }
         });
+    }
+    this.map._drawControlHandlers = {};
+    
+    // Reset drawing mode
+    this.drawingMode = null;
+    this.isDrawingActive = false;
+    
+    // Remove style overrides when exiting drawing mode
+    const existingStyle = document.getElementById('drawing-preview-override');
+    if (existingStyle) {
+        existingStyle.remove();
+    }
+}
+
+// Update initDrawingSystem to remove any default toolbar
+initDrawingSystem() {
+    // Initialize draw control with hidden toolbar
+    this.drawControl = new L.Control.Draw({
+        position: 'topleft',
+        draw: {
+            polyline: {
+                shapeOptions: {
+                    color: this.drawColor.value,
+                    weight: parseInt(this.lineWidth.value)
+                }
+            },
+            polygon: {
+                shapeOptions: {
+                    color: this.drawColor.value,
+                    weight: parseInt(this.lineWidth.value),
+                    fillColor: this.drawColor.value,
+                    fillOpacity: parseInt(this.fillOpacity.value) / 100
+                },
+                allowIntersection: false,
+                showArea: true
+            },
+            rectangle: {
+                shapeOptions: {
+                    color: this.drawColor.value,
+                    weight: parseInt(this.lineWidth.value),
+                    fillColor: this.drawColor.value,
+                    fillOpacity: parseInt(this.fillOpacity.value) / 100
+                }
+            },
+            circle: {
+                shapeOptions: {
+                    color: this.drawColor.value,
+                    weight: parseInt(this.lineWidth.value),
+                    fillColor: this.drawColor.value,
+                    fillOpacity: parseInt(this.fillOpacity.value) / 100
+                }
+            },
+            marker: {
+                icon: L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="background: ${this.drawColor.value}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                })
+            }
+        },
+        edit: {
+            featureGroup: this.drawnItems,
+            remove: false
+        }
+    });
+    
+    // Add draw control to map
+    this.map.addControl(this.drawControl);
+    
+    // Remove the toolbar element completely
+    setTimeout(() => {
+        // Find and remove the draw toolbar element
+        const drawToolbar = document.querySelector('.leaflet-draw.leaflet-control');
+        if (drawToolbar) {
+            drawToolbar.remove();
+        }
+        
+        // Also remove any toolbar containers
+        document.querySelectorAll('.leaflet-draw-toolbar').forEach(el => {
+            el.remove();
+        });
+    }, 100);
+    
+    // Handle drawing created event
+    this.map.on(L.Draw.Event.CREATED, (e) => {
+        const layer = e.layer;
+        const type = e.layerType;
+        
+        // Style the drawn item
+        this.styleDrawnItem(layer, type);
+        
+        // Add to drawn items
+        this.drawnItems.addLayer(layer);
+        
+        // Save drawing
+        this.saveDrawing(layer, type);
+        
+        // Exit drawing mode
+        this.exitDrawingMode();
+        
+        // Select the new drawing
+        this.selectDrawing(layer);
+    });
+    
+    // Handle drawing edited event
+    this.map.on(L.Draw.Event.EDITED, (e) => {
+        const layers = e.layers;
+        layers.eachLayer((layer) => {
+            this.updateDrawing(layer);
+        });
+    });
+    
+    // Handle drawing deleted event
+    this.map.on(L.Draw.Event.DELETED, (e) => {
+        const layers = e.layers;
+        layers.eachLayer((layer) => {
+            this.removeDrawing(layer);
+        });
+    });
+    
+    // Handle drawing selection
+    this.map.on('click', (e) => {
+        if (!e.originalEvent.propagatedFromDrawing) {
+            this.deselectAllDrawings();
+        }
+    });
+}
+
+
+overrideDrawingStyles() {
+    // Override the CSS for drawing preview elements
+    const style = document.createElement('style');
+    style.id = 'drawing-preview-override';
+    style.textContent = `
+        /* Hide the default blue rectangle preview */
+        .leaflet-draw.leaflet-control {
+            display: none !important;
+        }
+        
+        /* Override drawing preview styles */
+        .leaflet-draw-draw-rectangle {
+            display: none !important;
+        }
+        
+        /* Customize the drawing preview to use user colors */
+        .leaflet-draw-preview,
+        .leaflet-draw-draw-polygon,
+        .leaflet-draw-draw-rectangle,
+        .leaflet-draw-draw-circle,
+        .leaflet-draw-draw-polyline {
+            color: ${this.drawColor.value} !important;
+        }
+        
+        /* Style the drawing guide lines */
+        .leaflet-draw-guide-line {
+            stroke: ${this.drawColor.value} !important;
+            stroke-width: ${parseInt(this.lineWidth.value)}px !important;
+            stroke-opacity: 0.6 !important;
+        }
+        
+        /* Style the drawing guide text */
+        .leaflet-draw-guide-text {
+            color: ${this.drawColor.value} !important;
+            background: rgba(0,0,0,0.7) !important;
+            padding: 2px 4px !important;
+            border-radius: 2px !important;
+            font-size: 11px !important;
+        }
+        
+        /* Remove default blue fill from rectangle preview */
+        .leaflet-draw-draw-rectangle,
+        .leaflet-draw-draw-polygon,
+        .leaflet-draw-draw-circle {
+            fill-opacity: 0.1 !important;
+            fill: ${this.drawColor.value} !important;
+            stroke: ${this.drawColor.value} !important;
+        }
+        
+        /* Override the default blue rectangle completely */
+        .leaflet-draw-draw-rectangle path,
+        .leaflet-draw-draw-polygon path,
+        .leaflet-draw-draw-circle path {
+            fill: ${this.drawColor.value} !important;
+            fill-opacity: 0.1 !important;
+            stroke: ${this.drawColor.value} !important;
+            stroke-width: ${parseInt(this.lineWidth.value)}px !important;
+        }
+        
+        /* Hide any default blue toolbars */
+        .leaflet-draw-toolbar {
+            display: none !important;
+        }
+        
+        /* Override the drawing cursor */
+        .leaflet-draw-draw-rectangle,
+        .leaflet-draw-draw-polygon,
+        .leaflet-draw-draw-circle,
+        .leaflet-draw-draw-polyline,
+        .leaflet-draw-draw-marker {
+            cursor: crosshair !important;
+        }
+    `;
+    
+    // Remove existing override if any
+    const existingStyle = document.getElementById('drawing-preview-override');
+    if (existingStyle) {
+        existingStyle.remove();
+    }
+    
+    // Add the new style
+    document.head.appendChild(style);
+}
+
+restylePreviewElements() {
+    // Find all SVG elements that might be the rectangle preview
+    const svgElements = document.querySelectorAll('svg path');
+    
+    svgElements.forEach(el => {
+        // Check if this is likely a drawing preview element
+        const parent = el.parentElement;
+        if (parent && parent.classList && 
+            (parent.classList.contains('leaflet-zoom-animated') || 
+             el.getAttribute('stroke') === '#3388ff' ||
+             el.getAttribute('fill') === '#3388ff')) {
+            
+            // Change the color from blue to our custom color
+            el.setAttribute('stroke', this.drawColor.value);
+            el.setAttribute('fill', this.drawColor.value);
+            el.setAttribute('stroke-width', this.lineWidth.value);
+            el.setAttribute('fill-opacity', '0.1');
+            el.setAttribute('stroke-opacity', '0.8');
+        }
+    });
+}
+
+
+enterDrawingMode(mode) {
+    // Only allow drawing on earthquake map layer
+    if (this.currentLayer !== 'earthquake' && this.currentLayer !== 'fault') {
+        this.showNotification('Drawing is only available on the Earthquake Map layer', 'error');
+        return;
+    }
+    
+    // Exit current drawing mode and clean up
+    this.exitDrawingMode();
+    this.cleanupDrawingControls();
+    
+    this.drawingMode = mode;
+    
+    // Update the prototype with current color values
+    if (L.Draw && L.Draw.Rectangle) {
+        L.Draw.Rectangle.prototype.drawColor = this.drawColor;
+        L.Draw.Rectangle.prototype.lineWidth = this.lineWidth;
+    }
+    
+    // Initialize drawing system if not already initialized
+    if (!this.drawControl) {
+        this.initDrawingSystem();
+    }
+    
+    // Update draw control options with current styles
+    if (this.drawControl) {
+        // Update marker options
+        this.drawControl.options.draw.marker.icon = L.divIcon({
+            className: 'custom-marker',
+            html: `<div style="background: ${this.drawColor.value}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+        
+        // Update line options
+        this.drawControl.options.draw.polyline.shapeOptions = {
+            color: this.drawColor.value,
+            weight: parseInt(this.lineWidth.value)
+        };
+        
+        // Update shape options for polygon, rectangle, circle
+        const shapeOptions = {
+            color: this.drawColor.value,
+            weight: parseInt(this.lineWidth.value),
+            fillColor: this.drawColor.value,
+            fillOpacity: 0.1 // Use low opacity for preview
+        };
+        
+        this.drawControl.options.draw.polygon.shapeOptions = shapeOptions;
+        this.drawControl.options.draw.rectangle.shapeOptions = shapeOptions;
+        this.drawControl.options.draw.circle.shapeOptions = shapeOptions;
+    }
+    
+    // Activate drawing mode
+    try {
+        // Disable any existing drawing
+        if (this.map._drawControlHandlers) {
+            Object.values(this.map._drawControlHandlers).forEach(handler => {
+                if (handler && handler.disable) {
+                    handler.disable();
+                }
+            });
+        }
+        
+        // Create and enable new handler
+        let handler;
+        switch(mode) {
+            case 'marker':
+                handler = new L.Draw.Marker(this.map, this.drawControl.options.draw.marker);
+                handler.enable();
+                this.map._drawControlHandlers = this.map._drawControlHandlers || {};
+                this.map._drawControlHandlers.marker = handler;
+                break;
+            case 'polyline':
+                handler = new L.Draw.Polyline(this.map, this.drawControl.options.draw.polyline);
+                handler.enable();
+                this.map._drawControlHandlers = this.map._drawControlHandlers || {};
+                this.map._drawControlHandlers.polyline = handler;
+                break;
+            case 'polygon':
+                handler = new L.Draw.Polygon(this.map, this.drawControl.options.draw.polygon);
+                handler.enable();
+                this.map._drawControlHandlers = this.map._drawControlHandlers || {};
+                this.map._drawControlHandlers.polygon = handler;
+                break;
+            case 'rectangle':
+                handler = new L.Draw.Rectangle(this.map, this.drawControl.options.draw.rectangle);
+                handler.enable();
+                this.map._drawControlHandlers = this.map._drawControlHandlers || {};
+                this.map._drawControlHandlers.rectangle = handler;
+                break;
+            case 'circle':
+                handler = new L.Draw.Circle(this.map, this.drawControl.options.draw.circle);
+                handler.enable();
+                this.map._drawControlHandlers = this.map._drawControlHandlers || {};
+                this.map._drawControlHandlers.circle = handler;
+                break;
+        }
+        
+        // Immediately find and restyle any preview rectangle
+        setTimeout(() => {
+            this.restylePreviewElements();
+        }, 10);
+        
+    } catch (error) {
+        console.error('Error enabling drawing mode:', error);
+        this.showNotification('Error enabling drawing tool', 'error');
+        return;
+    }
+    
+    // Update button states
+    Object.values(this.drawButtons).forEach(btn => {
+        if (btn) btn.classList.remove('active');
+    });
+    if (this.drawButtons[mode]) {
+        this.drawButtons[mode].classList.add('active');
+    }
+    
+    this.isDrawingActive = true;
+    this.showDrawingModeIndicator(mode);
+}
+
+// Also remove any existing draw controls from the map in the constructor
+// Add this line at the end of initMap method:
+initMap() {
+        // Create map centered on Philippines
+        this.map = L.map('baseMap', {
+            center: [12.8797, 121.7740], // Center of Philippines
+            zoom: 6,
+            zoomControl: true,
+            attributionControl: false
+        });
+        
+        // Add base tile layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(this.map);
+        
+        // Add scale control
+        L.control.scale({ imperial: false }).addTo(this.map);
+        
+        // Add custom attribution
+        L.control.attribution({
+            position: 'bottomright'
+        }).addTo(this.map).addAttribution('QuakePH | Philippine Earthquake Monitor');
+        
+        // Create layer groups
+        this.quakeLayerGroup = L.layerGroup().addTo(this.map);
+        this.faultLayerGroup = L.layerGroup();
+        
+        // Add drawing layer to map
+        this.drawnItems.addTo(this.map);
+
+        setTimeout(() => {
+        // Permanently hide any draw toolbars
+        document.querySelectorAll('.leaflet-draw.leaflet-control').forEach(el => {
+            el.style.display = 'none';
+        });
+        }, 500);
+
+    }
+
+    
+    // Exit drawing mode
+    exitDrawingMode() {
+        // Clean up all drawing controls
+        this.cleanupDrawingControls();
+        
+        // Update button states
+        Object.values(this.drawButtons).forEach(btn => {
+            if (btn) btn.classList.remove('active');
+        });
+        
+        this.hideDrawingModeIndicator();
     }
     
     // Style a drawn item
@@ -213,41 +745,6 @@ class QuakePHMap {
         const color = this.drawColor.value;
         const width = parseInt(this.lineWidth.value);
         const opacity = parseInt(this.fillOpacity.value) / 100;
-        
-        switch(type) {
-            case 'marker':
-                // Already styled by the draw control
-                break;
-                
-            case 'polyline':
-                layer.setStyle({
-                    color: color,
-                    weight: width,
-                    opacity: 0.8
-                });
-                break;
-                
-            case 'polygon':
-            case 'rectangle':
-                layer.setStyle({
-                    color: color,
-                    weight: width,
-                    opacity: 0.8,
-                    fillColor: color,
-                    fillOpacity: opacity
-                });
-                break;
-                
-            case 'circle':
-                layer.setStyle({
-                    color: color,
-                    weight: width,
-                    opacity: 0.8,
-                    fillColor: color,
-                    fillOpacity: opacity * 0.5
-                });
-                break;
-        }
         
         // Store drawing properties
         layer.drawingId = this.nextDrawingId++;
@@ -259,11 +756,58 @@ class QuakePHMap {
             createdAt: new Date().toISOString()
         };
         
+        // Style based on type
+        if (type === 'marker') {
+            // Marker already styled by the draw control
+            layer.setIcon(L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="background: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            }));
+        } else if (type === 'polyline' || type === 'line') {
+            layer.setStyle({
+                color: color,
+                weight: width,
+                opacity: 0.8,
+                lineCap: 'round',
+                lineJoin: 'round'
+            });
+        } else if (type === 'polygon' || type === 'rectangle') {
+            layer.setStyle({
+                color: color,
+                weight: width,
+                opacity: 0.8,
+                fillColor: color,
+                fillOpacity: opacity,
+                lineCap: 'round',
+                lineJoin: 'round'
+            });
+        } else if (type === 'circle') {
+            layer.setStyle({
+                color: color,
+                weight: width,
+                opacity: 0.8,
+                fillColor: color,
+                fillOpacity: opacity * 0.5,
+                lineCap: 'round',
+                lineJoin: 'round'
+            });
+        }
+        
         // Add click event for selection
         layer.on('click', (e) => {
             e.originalEvent.propagatedFromDrawing = true;
             this.selectDrawing(layer);
         });
+        
+        // Add drag events for markers and text
+        if (type === 'marker' || type === 'text') {
+            layer.on('dragend', () => {
+                this.updateDrawing(layer);
+                this.saveDrawingsToStorage();
+            });
+        }
     }
     
     // Save drawing to list
@@ -472,69 +1016,6 @@ class QuakePHMap {
         }
     }
     
-    // Enter drawing mode
-    enterDrawingMode(mode) {
-        // Only allow drawing on earthquake map layer
-        if (this.currentLayer !== 'earthquake' && this.currentLayer !== 'fault') {
-            this.showNotification('Drawing is only available on the Earthquake Map layer', 'error');
-            return;
-        }
-        
-        this.exitDrawingMode();
-        this.drawingMode = mode;
-        
-        // Initialize drawing system if not already initialized
-        if (!this.drawControl) {
-            this.initDrawingSystem();
-        }
-        
-        // Activate corresponding draw control
-        switch(mode) {
-            case 'marker':
-                new L.Draw.Marker(this.map, this.drawControl.options.draw.marker).enable();
-                break;
-            case 'polyline':
-                new L.Draw.Polyline(this.map, this.drawControl.options.draw.polyline).enable();
-                break;
-            case 'polygon':
-                new L.Draw.Polygon(this.map, this.drawControl.options.draw.polygon).enable();
-                break;
-            case 'rectangle':
-                new L.Draw.Rectangle(this.map, this.drawControl.options.draw.rectangle).enable();
-                break;
-            case 'circle':
-                new L.Draw.Circle(this.map, this.drawControl.options.draw.circle).enable();
-                break;
-        }
-        
-        // Update button states
-        Object.values(this.drawButtons).forEach(btn => {
-            if (btn) btn.classList.remove('active');
-        });
-        if (this.drawButtons[mode]) {
-            this.drawButtons[mode].classList.add('active');
-        }
-        
-        this.isDrawingActive = true;
-        this.showDrawingModeIndicator(mode);
-    }
-    
-    // Exit drawing mode
-    exitDrawingMode() {
-        if (this.drawingMode) {
-            this.map.fire('draw:drawstop');
-            this.drawingMode = null;
-            this.isDrawingActive = false;
-            
-            // Update button states
-            Object.values(this.drawButtons).forEach(btn => {
-                if (btn) btn.classList.remove('active');
-            });
-            
-            this.hideDrawingModeIndicator();
-        }
-    }
-    
     // Show drawing mode indicator
     showDrawingModeIndicator(mode) {
         let indicator = document.querySelector('.drawing-mode-indicator');
@@ -549,7 +1030,8 @@ class QuakePHMap {
             polyline: 'Line',
             polygon: 'Polygon',
             rectangle: 'Rectangle',
-            circle: 'Circle'
+            circle: 'Circle',
+            text: 'Text'
         };
         
         indicator.innerHTML = `
@@ -638,6 +1120,12 @@ class QuakePHMap {
         marker.on('click', (e) => {
             e.originalEvent.propagatedFromDrawing = true;
             this.selectDrawing(marker);
+        });
+        
+        // Add drag event
+        marker.on('dragend', () => {
+            this.updateDrawing(marker);
+            this.saveDrawingsToStorage();
         });
         
         return marker;
@@ -755,8 +1243,6 @@ class QuakePHMap {
             }
         });
     }
-    
-    // ... (rest of the existing earthquake-related methods remain the same)
     
     // Load fault lines data
     loadFaultLines() {
@@ -1055,6 +1541,7 @@ class QuakePHMap {
         
         // Exit drawing mode when switching layers
         this.exitDrawingMode();
+        this.cleanupDrawingControls();
         
         // Update current layer
         this.currentLayer = layerId;
@@ -1162,6 +1649,63 @@ class QuakePHMap {
         }
     }
     
+    // Toggle drawing tools visibility
+    toggleDrawingTools() {
+        this.drawingToolsPanel.classList.toggle('active');
+        this.toggleDrawing.classList.toggle('active');
+        
+        if (this.drawingToolsPanel.classList.contains('active')) {
+            this.showNotification('Drawing tools activated. Drawings are only available on Earthquake Map and Fault Lines layers.', 'info');
+        }
+    }
+    
+    // Start text drawing mode
+    startTextDrawing() {
+        // Only allow drawing on earthquake map layer
+        if (this.currentLayer !== 'earthquake' && this.currentLayer !== 'fault') {
+            this.showNotification('Drawing is only available on the Earthquake Map layer', 'error');
+            return;
+        }
+        
+        this.exitDrawingMode();
+        this.drawingMode = 'text';
+        this.showNotification('Click on the map to add text annotation', 'info');
+        
+        // Update button states
+        Object.values(this.drawButtons).forEach(btn => {
+            if (btn) btn.classList.remove('active');
+        });
+        this.drawButtons.text.classList.add('active');
+        this.isDrawingActive = true;
+        this.showDrawingModeIndicator('text');
+    }
+    
+    // Delete selected drawing
+    deleteSelectedDrawing() {
+        if (this.selectedDrawing) {
+            this.drawnItems.removeLayer(this.selectedDrawing);
+            this.removeDrawing(this.selectedDrawing);
+            this.showNotification('Drawing deleted', 'success');
+        } else {
+            this.showNotification('No drawing selected', 'error');
+        }
+    }
+    
+    // Clear all drawings
+    clearAllDrawings() {
+        if (this.drawings.length > 0) {
+            if (confirm('Are you sure you want to clear all drawings? This cannot be undone.')) {
+                this.drawnItems.clearLayers();
+                this.drawings = [];
+                this.updateDrawingsList();
+                localStorage.removeItem('quakeph_drawings');
+                this.showNotification('All drawings cleared', 'success');
+            }
+        } else {
+            this.showNotification('No drawings to clear', 'info');
+        }
+    }
+    
     // Initialize event listeners
     initEventListeners() {
         // Sidebar toggle
@@ -1258,54 +1802,6 @@ class QuakePHMap {
                 this.exitDrawingMode();
             }
         });
-    }
-    
-    // Toggle drawing tools visibility
-    toggleDrawingTools() {
-        this.drawingToolsPanel.classList.toggle('active');
-        this.toggleDrawing.classList.toggle('active');
-        
-        if (this.drawingToolsPanel.classList.contains('active')) {
-            this.showNotification('Drawing tools activated. Drawings are only available on Earthquake Map and Fault Lines layers.', 'info');
-        }
-    }
-    
-    // Start text drawing mode
-    startTextDrawing() {
-        this.drawingMode = 'text';
-        this.showNotification('Click on the map to add text annotation', 'info');
-        
-        // Update button states
-        Object.values(this.drawButtons).forEach(btn => {
-            if (btn) btn.classList.remove('active');
-        });
-        this.drawButtons.text.classList.add('active');
-    }
-    
-    // Delete selected drawing
-    deleteSelectedDrawing() {
-        if (this.selectedDrawing) {
-            this.drawnItems.removeLayer(this.selectedDrawing);
-            this.removeDrawing(this.selectedDrawing);
-            this.showNotification('Drawing deleted', 'success');
-        } else {
-            this.showNotification('No drawing selected', 'error');
-        }
-    }
-    
-    // Clear all drawings
-    clearAllDrawings() {
-        if (this.drawings.length > 0) {
-            if (confirm('Are you sure you want to clear all drawings? This cannot be undone.')) {
-                this.drawnItems.clearLayers();
-                this.drawings = [];
-                this.updateDrawingsList();
-                localStorage.removeItem('quakeph_drawings');
-                this.showNotification('All drawings cleared', 'success');
-            }
-        } else {
-            this.showNotification('No drawings to clear', 'info');
-        }
     }
 }
 
