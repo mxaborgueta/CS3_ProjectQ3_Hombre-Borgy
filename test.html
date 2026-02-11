@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuakePH - Philippine Earthquake Map</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css" />
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-mountain"></i>
+                    <h1>QuakePH</h1>
+                    <p class="subtitle">Philippine Earthquake Monitor</p>
+                </div>
+                <button class="toggle-sidebar" id="toggleSidebar">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+            
+            <!-- Layer Controls -->
+            <div class="layer-controls">
+                <h3><i class="fas fa-layer-group"></i> Map Layers</h3>
+                <div class="layer-buttons">
+                    <button class="layer-btn active" data-layer="earthquake">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Earthquake Map</span>
+                        <i class="fas fa-check status-icon"></i>
+                    </button>
+                    
+                    <button class="layer-btn" data-layer="hazard">
+                        <i class="fas fa-mountain"></i>
+                        <span>Seismic Hazard</span>
+                        <i class="fas fa-check status-icon"></i>
+                    </button>
+                    
+                    <button class="layer-btn" data-layer="risk">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Seismic Risk</span>
+                        <i class="fas fa-check status-icon"></i>
+                    </button>
+                    
+                    <button class="layer-btn" data-layer="fault">
+                        <i class="fas fa-road"></i>
+                        <span>Fault Lines</span>
+                        <i class="fas fa-check status-icon"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Map Legend -->
+            <div class="legend">
+                <h3><i class="fas fa-key"></i> Legend</h3>
+                <div class="legend-content" id="legendContent">
+                    <!-- Legend content will be populated by JavaScript -->
+                </div>
+            </div>
+            
+            <!-- Information Panel -->
+            <div class="info-panel">
+                <h3><i class="fas fa-info-circle"></i> Information</h3>
+                <div class="info-content">
+                    <p><strong>Data Sources:</strong></p>
+                    <ul>
+                        <li>Earthquake Data: USGS</li>
+                        <li>Hazard/Risk Maps: GEM OpenQuake</li>
+                        <li>Fault Lines: PHIVOLCS</li>
+                    </ul>
+                    <p class="timestamp">Last updated: <span id="lastUpdate">Loading...</span></p>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Map Area -->
+        <main class="main-content">
+            <div class="map-header">
+                <button class="mobile-toggle" id="mobileToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h2 id="currentLayerTitle">Philippine Earthquake Map</h2>
+                <div class="map-controls">
+                    <button class="control-btn" id="refreshBtn" title="Refresh earthquake data">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="control-btn" id="locateBtn" title="Locate me">
+                        <i class="fas fa-location-arrow"></i>
+                    </button>
+                    <button class="control-btn" id="fullscreenBtn" title="Fullscreen">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Map Container -->
+            <div class="map-container">
+                <!-- Base Map (Leaflet) -->
+                <div id="baseMap" class="map-layer active"></div>
+                
+                <!-- Hazard Map (Embedded) -->
+                <iframe id="hazardMap" class="map-layer" 
+                    src="https://maps.openquake.org/map/global-seismic-hazard-map/#7/14.5/121.5"
+                    frameborder="0"
+                    allowfullscreen></iframe>
+                
+                <!-- Risk Map (Embedded) -->
+                <iframe id="riskMap" class="map-layer"
+                    src="https://b.maps.openquake.org/map/grm-2023-1/#7/14.5/121.5"
+                    frameborder="0"
+                    allowfullscreen></iframe>
+                
+                <!-- Loading Overlay -->
+                <div class="loading-overlay" id="loadingOverlay">
+                    <div class="loading-spinner"></div>
+                    <p>Loading earthquake data...</p>
+                </div>
+            </div>
+            
+            <!-- Earthquake List Panel -->
+            <div class="quake-panel" id="quakePanel">
+                <div class="quake-panel-header">
+                    <h3><i class="fas fa-list"></i> Recent Earthquakes</h3>
+                    <button class="close-panel" id="closeQuakePanel">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="quake-list" id="quakeList">
+                    <!-- Earthquake list will be populated by JavaScript -->
+                </div>
+            </div>
+            
+            <!-- Map Layer Toggle (Floating) -->
+            <div class="floating-controls">
+                <button class="floating-btn" id="toggleQuakePanel" title="Show earthquake list">
+                    <i class="fas fa-list"></i>
+                    <span class="badge" id="quakeCount">0</span>
+                </button>
+                <button class="floating-btn" id="toggleLayers" title="Toggle sidebar">
+                    <i class="fas fa-layer-group"></i>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="js/script.js"></script>
+</body>
+</html>
