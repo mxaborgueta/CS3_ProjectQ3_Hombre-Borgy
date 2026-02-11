@@ -564,6 +564,7 @@ restylePreviewElements() {
 }
 
 
+
 enterDrawingMode(mode) {
     // Only allow drawing on earthquake map layer
     if (this.currentLayer !== 'earthquake' && this.currentLayer !== 'fault') {
