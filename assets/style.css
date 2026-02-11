@@ -1318,3 +1318,59 @@ iframe.map-layer.active {
         margin: 1rem;
     }
 }
+
+.map-layer {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.map-layer.active {
+    display: block !important;
+    z-index: 1;
+}
+
+#baseMap.active, 
+#hazardMap.active, 
+#riskMap.active {
+    display: block !important;
+}
+
+.map-layer {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.map-layer.active {
+    display: block !important;
+}
+
+/* Make sure base map is visible when active */
+#baseMap.active {
+    display: block;
+}
+
+/* Iframe layers should just follow the display property */
+#hazardMap, #riskMap {
+    display: none;
+}
+
+#hazardMap.active, #riskMap.active {
+    display: block;
+}
+
+/* Make iframe background black/dark gray to match your theme */
+#hazardMap, #riskMap {
+    background: #0a0c0f;
+}
+
+#hazardMap.active, #riskMap.active {
+    background: transparent;
+}
