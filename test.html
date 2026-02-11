@@ -7,6 +7,8 @@
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Draw CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/style.css" />
@@ -60,6 +62,75 @@
                 </div>
             </div>
             
+            <!-- Drawing Tools Panel -->
+            <div class="drawing-tools-panel">
+                <h3><i class="fas fa-pencil-alt"></i> Drawing Tools</h3>
+                <div class="drawing-buttons">
+                    <button class="draw-btn" id="drawMarker" title="Add Marker">
+                        <i class="fas fa-map-pin"></i>
+                        <span>Marker</span>
+                    </button>
+                    <button class="draw-btn" id="drawLine" title="Draw Line">
+                        <i class="fas fa-draw-polyline"></i>
+                        <span>Line</span>
+                    </button>
+                    <button class="draw-btn" id="drawPolygon" title="Draw Polygon">
+                        <i class="fas fa-draw-polygon"></i>
+                        <span>Polygon</span>
+                    </button>
+                    <button class="draw-btn" id="drawRectangle" title="Draw Rectangle">
+                        <i class="fas fa-vector-square"></i>
+                        <span>Rectangle</span>
+                    </button>
+                    <button class="draw-btn" id="drawCircle" title="Draw Circle">
+                        <i class="fas fa-circle"></i>
+                        <span>Circle</span>
+                    </button>
+                    <button class="draw-btn" id="drawText" title="Add Text">
+                        <i class="fas fa-font"></i>
+                        <span>Text</span>
+                    </button>
+                    <button class="draw-btn delete-btn" id="deleteSelected" title="Delete Selected">
+                        <i class="fas fa-trash"></i>
+                        <span>Delete</span>
+                    </button>
+                    <button class="draw-btn clear-btn" id="clearAllDrawings" title="Clear All Drawings">
+                        <i class="fas fa-broom"></i>
+                        <span>Clear All</span>
+                    </button>
+                    <button class="draw-btn export-btn" id="exportDrawings" title="Export Drawings">
+                        <i class="fas fa-download"></i>
+                        <span>Export</span>
+                    </button>
+                </div>
+                
+                <!-- Drawing Properties -->
+                <div class="drawing-properties">
+                    <div class="property-row">
+                        <label for="drawColor">Color:</label>
+                        <input type="color" id="drawColor" value="#00b4d8" title="Drawing Color">
+                    </div>
+                    <div class="property-row">
+                        <label for="lineWidth">Width:</label>
+                        <input type="range" id="lineWidth" min="1" max="10" value="3" title="Line Width">
+                        <span id="widthValue">3px</span>
+                    </div>
+                    <div class="property-row">
+                        <label for="fillOpacity">Fill Opacity:</label>
+                        <input type="range" id="fillOpacity" min="0" max="100" value="30" title="Fill Opacity">
+                        <span id="opacityValue">30%</span>
+                    </div>
+                </div>
+                
+                <!-- Drawings List -->
+                <div class="drawings-list">
+                    <h4><i class="fas fa-list"></i> Saved Drawings</h4>
+                    <div class="drawings-container" id="drawingsList">
+                        <!-- Drawings will be listed here -->
+                    </div>
+                </div>
+            </div>
+            
             <!-- Map Legend -->
             <div class="legend">
                 <h3><i class="fas fa-key"></i> Legend</h3>
@@ -91,6 +162,9 @@
                 </button>
                 <h2 id="currentLayerTitle">Philippine Earthquake Map</h2>
                 <div class="map-controls">
+                    <button class="control-btn" id="toggleDrawing" title="Toggle Drawing Tools">
+                        <i class="fas fa-pencil-alt"></i>
+                    </button>
                     <button class="control-btn" id="refreshBtn" title="Refresh earthquake data">
                         <i class="fas fa-sync-alt"></i>
                     </button>
@@ -140,6 +214,41 @@
                 </div>
             </div>
             
+            <!-- Text Input Modal -->
+            <div class="modal-overlay" id="textModal">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>Add Text Annotation</h3>
+                        <button class="close-modal" id="closeTextModal">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="textContent">Text:</label>
+                            <textarea id="textContent" placeholder="Enter your text here..." rows="3"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="textSize">Font Size:</label>
+                            <input type="range" id="textSize" min="12" max="36" value="16">
+                            <span id="textSizeValue">16px</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="textColor">Text Color:</label>
+                            <input type="color" id="textColor" value="#ffffff">
+                        </div>
+                        <div class="form-group">
+                            <label for="textBackground">Background:</label>
+                            <input type="color" id="textBackground" value="#000000">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" id="cancelText">Cancel</button>
+                        <button class="btn btn-primary" id="saveText">Add Text</button>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Map Layer Toggle (Floating) -->
             <div class="floating-controls">
                 <button class="floating-btn" id="toggleQuakePanel" title="Show earthquake list">
@@ -155,6 +264,8 @@
 
     <!-- Leaflet JavaScript -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Draw Plugin -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     
     <!-- Custom JavaScript -->
     <script src="assets/script.js"></script>
