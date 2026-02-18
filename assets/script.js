@@ -537,7 +537,7 @@ class QuakePHMap {
             popup.innerHTML = `
                 <div class="popup-content">
                     <h3><i class="fas fa-pencil-alt"></i> Drawing Tools Activated</h3>
-                    <p>Please close the text panel on the right to access the map fully.</p>
+                    <p>Please close the text panel on the right of the drawing tool to access the map fully.</p>
                     <p><small>Click the earthquake panel toggle button to close it.</small></p>
                     <button class="popup-close-btn">Got it</button>
                 </div>
